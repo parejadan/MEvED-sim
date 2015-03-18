@@ -1,11 +1,7 @@
 #include "sim_struct.h"
 #include <stdio.h> //printf
-<<<<<<< HEAD
-=======
-#include <stdlib.h> //rand
->>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
 #include <fstream>
-#include <sstream>
+//#include <sstream>
 #include <ctime> //produce random seeds for srand & rand
 
 using namespace std;
@@ -21,11 +17,7 @@ void Master::flipCoin() {
 	}
 }
 
-<<<<<<< HEAD
 vector< DroneUnit > setCoins(vector< DroneUnit > GRPS, int drnCount, Master* mstr) {
-=======
-vector<DroneUnit> setCoins(vector< DroneUnit > GRPS, int drnCount, Master* mstr) {
->>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
 	int followers = 0;
 	int divergent = 0;
 	for (int i = 0; i < drnCount; i++) {
@@ -52,24 +44,21 @@ int main() {
 	vector<DroneUnit> GRPS = genSingletons(n); //generate groups (drones)
 	int len = GRPS.size();
 	compLearningRate(); //set a learning rate for groups
-<<<<<<< HEAD
-	double util_r;
+	
 	for (int r = 1; r < R_MX; r++) {
 		GRPS = setCoins(GRPS, len, &mstr); //group decide to follow/deviate
 		mstr.flipCoin(); //master decides to check/not-check
 
 		for (int i = 0; i < len; i++) {
-			util_r = dy_computeUtil(GRPS[i].choice, mstr.choice, mstr.divergent);
-			GRPS[i].util += util_r;
-			mstr.util += util_r; 
+			dy_computeUtil(&GRPS[i], &mstr);
 			
-			GRPS[i].pc = dy_updatePC(GRPS[i].choice, GRPS[i].pc, mstr.choice, mstr.divergent); //update group's PC
+			dy_updatePC(&GRPS[i], &mstr); //update group's PC
 			printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i].pc, GRPS[i].choice, GRPS[i].util);
 			// += ss.str(GRPS[i].pc) + ( (i == len-1) ? "\n":",");
 			compPC += GRPS[i].pc;
 		}
 
-		mstr.prob = dy_updatePA(mstr.choice, mstr.prob, mstr.divergent);
+		dy_updatePA(&mstr);
 		printf("master) prob %f| choice %d| util %f\n", mstr.prob, mstr.choice, mstr.util);
 		//create disturbance when all PCs converge to 0
 		if (compPC == 0) {
@@ -81,32 +70,6 @@ int main() {
 
 		printf("compPC) %f\n", compPC);
 
-=======
-
-	for (int r = 1; r < R_MX; r++) {
-		GRPS = setCoins(GRPS, &mstr); //group decide to follow/deviate
-		mstr.flipCoin(); //master decides to check/not-check
-
-		for (int i = 0; i < len; i++) {
-			dy_computeUtil(&GRPS[i], &mstr);
-			printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i].pc, GRPS[i].choice, GRPS[i].util);
-
-			dy_updatePC(&GRPS[i], &mstr); //update group's PC
-			// += ss.str(GRPS[i].pc) + ( (i == len-1) ? "\n":",");
-			pcComp += GRPS[i].pc;
-		}
-
-		dy_updatePA(&mstr);
-
-		//create disturbance when all PCs converge to 0
-		if (pcComp == 0) {
-			distCnt++;
-			cycles.push_back(r - distAt); //record length of the cylce
-			distAt = r;
-		}
-
-		printf("\nReset #%d on round # %d| cycle: %d|\n", distCnt, r, cycles[distCnt-1]);
->>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
 		for (int i = 0; i < len; i++) {
 			GRPS[i].pc = randFunction(); //reset PC randomly
 			printf("PC %f|%s", GRPS[i].pc, ( (i == len-1) ? "\n":"") );
@@ -121,89 +84,31 @@ int main() {
 
 void compLearningRate() { alphaW = randFunction() * (1 / (aspiration + WPC) ); }
 
-<<<<<<< HEAD
-double dy_updatePC(int choice, double pc, int mchoice, int divergent) {
-	double tmp;
-	if (mchoice) {
-		if (choice == 1) { //unit follows
-			tmp = (pc + alphaW * (aspiration - (WBY - WCT))) * choice;
-		} else { //unit deviated 
-			tmp = (pc - alphaW * (aspiration - WPC)) * choice;			
-		}
-	} else { //master does not check
-		if (divergent > tou) {
-			if (choice == 1) { //unit follows but not part of the majority
-				tmp = (pc + alphaW * (aspiration + WCT)) * choice;
-			} else { //unit diviates and part of the majority
-				tmp = (pc + alphaW * (WBY - aspiration)) * choice;
-			}
-		} else {
-			if (choice == 1) { //unit follows and is part of the majority
-				tmp = (pc + alphaW * (aspiration - (WBY - WCT))) * choice;				
-			} else { //unit deviates but is not part of the majority 
-				tmp = (pc - alphaW * aspiration) * choice;
-=======
-void dy_updatePC(DroneUnit* unit, Master* mstr) {
+void dy_updatePC(DroneUnit* drn, Master* mstr) {
 	double tmp;
 	if (mstr->choice) {
-		if (unit->choice == 1) { //unit follows
-			tmp = (unit->pc + alphaW * (aspiration - (WBY - WCT))) * unit->choice;
+		if (drn->choice == 1) { //unit follows
+			tmp = (drn->pc + alphaW * (aspiration - (WBY - WCT))) * drn->choice;
 		} else { //unit deviated 
-			tmp = (unit->pc - alphaW * (aspiration - WPC)) * unit->choice;			
+			tmp = (drn->pc - alphaW * (aspiration - WPC)) * drn->choice;			
 		}
 	} else { //master does not check
 		if (mstr->divergent > tou) {
-			if (unit->choice == 1) { //unit follows but not part of the majority
-				tmp = (unit->pc + alphaW * (aspiration + WCT)) * unit->choice;
+			if (drn->choice == 1) { //unit follows but not part of the majority
+				tmp = (drn->pc + alphaW * (aspiration + WCT)) * drn->choice;
 			} else { //unit diviates and part of the majority
-				tmp = (unit->pc + alphaW * (WBY - aspiration)) * unit->choice;
+				tmp = (drn->pc + alphaW * (WBY - aspiration)) * drn->choice;
 			}
 		} else {
-			if (unit->choice == 1) { //unit follows and is part of the majority
-				tmp = (unit->pc + alphaW * (aspiration - (WBY - WCT))) * unit->choice;				
+			if (drn->choice == 1) { //unit follows and is part of the majority
+				tmp = (drn->pc + alphaW * (aspiration - (WBY - WCT))) * drn->choice;				
 			} else { //unit deviates but is not part of the majority 
-				tmp = (unit->pc - alphaW * aspiration) * unit->choice;
->>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
+				tmp = (drn->pc - alphaW * aspiration) * drn->choice;
 			}
 		}
 	}
 
-<<<<<<< HEAD
-	return max( 0.0, min(1.0, tmp) );
-}
-
-double dy_updatePA(int choice, double prob, int divergent) {
-	if (choice) {
-		double tmp = prob + alphaM * ( (divergent * 1.0) / n - tou);
-		//printf("PA %f| alphaM %f| divergent %d| n %d| tou %d\n", mstr->prob, alphaM, mstr->divergent, n, tou);
-		//printf("updating PA: %f\n", tmp);  
-		return min( 1.0, max( prob, tmp ) );
-	}
-	return prob;
-}
-
-double dy_computeUtil(int choice, int mchoice, int divergent) {
-	double tmp;
-	if (mchoice) { //master checks
-		if (choice == 1) { //unit follows, provide follwers reward
-			tmp = WBY - WCT; 
-		} else { //unit deviates, apply punishment 
-			tmp = -WPC;
-		}
-	} else { //master does not check
-		if (divergent > tou) { //majority deviated 
-			if (choice == 1) { //unit follows
-				tmp = -WCT;
-			} else { //unit deviated
-				tmp = WBY;
-			}
-		} else { //majority followed
-			if (choice == 1) { //unit followed
-				tmp = WBY - WCT;
-			} else { //unit deviated 
-				tmp = 0;
-=======
-	unit->pc = max( 0.0, min(1.0, tmp) );
+	drn->pc = max( 0.0, min(1.0, tmp) );
 }
 
 void dy_updatePA(Master* mstr) {
@@ -215,35 +120,32 @@ void dy_updatePA(Master* mstr) {
 	}
 }
 
-void dy_computeUtil(DroneUnit* unit, Master* mstr) {
+void dy_computeUtil(DroneUnit* drn, Master* mstr) {
+	double tmp;
 	if (mstr->choice) { //master checks
-		if (unit->choice == 1) { //unit follows, provide follwers reward
-			unit->util = WBY - WCT; 
+		if (drn->choice == 1) { //unit follows, provide follwers reward
+			tmp = WBY - WCT; 
 		} else { //unit deviates, apply punishment 
-			unit->util = -WPC;
+			tmp = -WPC;
 		}
 	} else { //master does not check
 		if (mstr->divergent > tou) { //majority deviated 
-			if (unit->choice == 1) { //unit follows
-				unit->util = -WCT;
+			if (drn->choice == 1) { //unit follows
+				tmp = -WCT;
 			} else { //unit deviated
-				unit->util = WBY;
+				tmp = WBY;
 			}
 		} else { //majority followed
-			if (unit->choice == 1) { //unit followed
-				unit->util = WBY - WCT;
+			if (drn->choice == 1) { //unit followed
+				tmp = WBY - WCT;
 			} else { //unit deviated 
-				unit = 0;
->>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
+				tmp = 0;
 			}
 		}
 	}
 
-<<<<<<< HEAD
 	//mstr->util += unit.util * (-1); //units reward is negative towards the master's
-	return tmp;
-=======
-	mstr->util += unit->util * (-1); //units reward is negative towards the master's
->>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
+	mstr->util += tmp;
+	drn->util += tmp;
 }
 
