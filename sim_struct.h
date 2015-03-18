@@ -10,11 +10,13 @@
 
 
 //////////////////////////////////////////////////////////////////////////////
+ /* !#GEN#! */
 #include "drones/DroneUnits.h"
 #include <vector>
- /* !#GEN#! */
+#include <stdio.h> //printf
+
 int n = 9; //number of drones within overall units (read DroneUnit.h for more info)
-int R_MX = 140; //number of times to repeat a game
+int R_MX = 10; //number of times to repeat a game
 int tou = (int) (n / 2.0);
 
 class Master {
@@ -34,19 +36,22 @@ std::vector< DroneUnit > setCoins(std::vector< DroneUnit >, int, Master*);
 double WPC = 1;		//drone punishment for being caught cheating
 double WCT = 0.1;	//drone cost for computing the task
 double WBY = 1;		//drone reward
-double MPW = 0; 	//master punishment for accepting a W answer
-double *MCY = &WBY;	//master cost for accepting w's answer
+double MPW = 0; 	//master punishment for accepting a wrong answer
+double *MCY = &WBY;	//master cost for accepting answer
 double MCA = 20; 	//master cost for verifying 
-double MBR = 0;		//master benefit for accepting a R answer
+double MBR = 0;		//master benefit for accepting a right answer
 
 ////////////////////////////////////////////////////////////////////////////
 /* !#MIX#! */
 
-//std::string GAME_NAME = "gameN-0n_model-MAJORITY"; //name for mixed equilibrai type
-//available worker 
-//const std::string type_1 = "_disobedient";
-//const std::string type_2 = "_compliant";
-//std::string type = type_2; //mixed equilibrai to run for simulations 
+char GAME_NAME[] = "gameN-0n_model-MAJORITY"; //name for mixed equilibrai type
+const int MODEL = 1;
+const char type_1[] = "_disobedient";
+const char type_2[] = "_compliant";
+const char* type = type_2; //mixed equilibrai to run for simulations 
+
+void mx_masterUtil(Master*);
+void mx_compteUtil(DroneUnit*, Master*);
 
 /////////////////////////////////////////////////////////////////////////////
 /* !#EVO#! */

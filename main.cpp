@@ -1,16 +1,14 @@
 #include "sim_struct.h"
-#include <stdio.h> //printf
 #include <fstream>
 //#include <sstream>
 #include <ctime> //produce random seeds for srand & rand
 
 using namespace std;
 
-Master::Master(double p, double u) { prob = p; util = u; }
+Master::Master(double p, double u) { prob = p; util = u; correct = 0; }
 
 void Master::flipCoin() {
-	double r = randFunction();
-	if (r < PA) { //master checks
+	if (randFunction() < PA) { //master checks
 		choice = 1;
 	} else { //master doesn't check
 		choice = 0;
@@ -29,7 +27,7 @@ vector< DroneUnit > setCoins(vector< DroneUnit > GRPS, int drnCount, Master* mst
 
 	mstr->followers = followers;
 	mstr->divergent = divergent;
-
+	//printf("\n>followers: %d| divergent: %d\n", followers, divergent);
 	return GRPS;
 }
 
@@ -38,12 +36,26 @@ int main() {
 
 	string pcDat = "", distDat = "";
 	ofstream simData, simData2;
-	stringstream ss;
+	//stringstream ss;
 
 	Master mstr(0.5, 0); //init master with a prob of 0.5, and util 0
-	vector<DroneUnit> GRPS = genSingletons(n); //generate groups (drones)
+	vector<DroneUnit> GRPS = genSingletons(n, 1.0); //generate groups (drones)
 	int len = GRPS.size();
-	compLearningRate(); //set a learning rate for groups
+
+	mstr.prob = (n * WBY + WCT) / (n * (WPC + 2 * WBY)) + WCT / 10;
+	GRPS = setCoins(GRPS, len, &mstr); //group decide to follow/deviate
+	mstr.flipCoin();
+	mx_masterUtil(&mstr);
+
+	for (int i = 0; i < len; i++) {
+		mx_compteUtil(&GRPS[i], &mstr);
+		printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i].pc, GRPS[i].choice, GRPS[i].util);
+
+	}
+	printf("master) prob %f| choice %d| util %f\n", mstr.prob, mstr.choice, mstr.util);
+
+
+/*	compLearningRate(); //set a learning rate for groups
 	
 	for (int r = 1; r < R_MX; r++) {
 		GRPS = setCoins(GRPS, len, &mstr); //group decide to follow/deviate
@@ -76,12 +88,97 @@ int main() {
 		}
 
 		//distDat += ss.str(r) + "," + ss.str(cycles[distCnt-1]) + "\n";
+	}*/
+}
+
+////////////////////////////////////////////////////////////////////////////
+/* !#MIX#! */
+void mx_compteUtil(DroneUnit* drn, Master* mstr) {
+	double utilD, utilF;
+	if (mstr->choice) {
+		if (mstr->divergent == n) {
+			utilD = - WPC;
+			utilF = 0;
+		} else {
+			utilD = - WPC;
+			utilF = WBY - WCT / drn->size;
+		}
+	} else {
+		if ( mstr->divergent > (n/2) ) {
+			switch(MODEL) {
+				case 1: //Rm
+					utilD = WBY;
+					utilF = - WCT / drn->size;
+					break;
+				case 2: //Ra
+					utilD = WBY;
+					utilF = WBY - WCT / drn->size;
+					break;
+				default:
+					utilD = 0;
+					utilF = - WCT / drn->size;
+			}
+		} else {
+			switch(MODEL) {
+				case 1: //Rm
+					utilD = 0;
+					utilF = WBY - WCT / drn->size;
+					break;
+				case 2: //Ra
+					utilD = WBY;
+					utilF = WBY - WCT / drn->size;
+					break;
+				default: //Rn
+					utilD = 0;
+					utilF = - WCT / drn->size;
+			}
+		}
+	}
+
+	if (drn->choice == 1)
+		drn->util = utilF;
+	else
+		drn->util = utilD;
+}
+
+void mx_masterUtil(Master* mstr) {
+	if (mstr->choice) { //master checks
+		if (mstr->divergent == n) { //everyone diviated
+			mstr->util = - MPW - MCA + n * WPC;
+		} else { //everyone followed
+			mstr->correct++;
+			mstr->util = MBR - MCA - (n - mstr->divergent) * (*MCY) + mstr->divergent * WPC;
+		}
+	} else { //master does not check
+		if ( mstr->divergent > (n / 2) ) { //majority deviated
+			switch(MODEL) {
+				case 1: //Rm
+					mstr->util = - MPW - mstr->divergent * (*MCY);
+					break;
+				case 2: //Ra
+					mstr->util = - MPW - n * (*MCY);
+					break;
+				default: //Rn
+					mstr->util = - MPW;
+			}
+		} else { //majority followed
+			mstr->correct++;
+			switch(MODEL) {
+				case 1: //Rm
+					mstr->util = MBR - (n - mstr->divergent) * (*MCY);
+					break;
+				case 2: //Ra
+					mstr->util = MBR - n * (*MCY);
+					break;
+				default: //Rn
+					mstr->util = MBR;
+			}
+		}
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////
 /* !#EVO#! */
-
 void compLearningRate() { alphaW = randFunction() * (1 / (aspiration + WPC) ); }
 
 void dy_updatePC(DroneUnit* drn, Master* mstr) {
