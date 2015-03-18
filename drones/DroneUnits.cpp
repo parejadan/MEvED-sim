@@ -1,11 +1,19 @@
 #include "DroneUnits.h"
 
 
+<<<<<<< HEAD
+double randFunction() { return (double)rand() / RAND_MAX; }
+
+double initPC = 0.5, initUtil = 0.0;  //drones default pc value and utility
+DroneUnit::DroneUnit(double p, double u) { pc = p; util = u; } //constructor
+
+=======
 
 double randFunction() { return (double)rand() / RAND_MAX; }
 
 double initPC = 0.5, initUtil = 0.0;  //drones default pc value and utility
 DroneUnit::DroneUnit(double p, double u) { pc = p; util = u; } 
+>>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
 void DroneUnit::flipCoin() {
 	double r = randFunction();
 	if (r < pc) { choice = -1; } //unit cheated

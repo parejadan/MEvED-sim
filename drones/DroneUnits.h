@@ -1,6 +1,12 @@
 /**
  * version 1.0: everything is made public so to easily access variables 
  */
+<<<<<<< HEAD
+#include <stdlib.h>
+
+ 
+=======
+>>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
 double randFunction(); //returns random value between range (0,1)
 class DroneUnit {
 public:

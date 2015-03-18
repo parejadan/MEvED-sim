@@ -29,7 +29,11 @@ public:
 	double util;
 };
 
+<<<<<<< HEAD
+std::vector< DroneUnit > setCoins(std::vector< DroneUnit >, int, Master*);
+=======
 std::vector< DroneUnit > setCoins(std::vector< DroneUnit >, Master*);
+>>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
 
 double WPC = 1;		//drone punishment for being caught cheating
 double WCT = 0.1;	//drone cost for computing the task
@@ -52,12 +56,20 @@ double MBR = 0;		//master benefit for accepting a R answer
 /* !#EVO#! */
 
 /*
+<<<<<<< HEAD
+ * compPC contains a composite value of all drones probability of cheating.
+=======
  * pcComp contains a composite value of all drones probability of cheating.
+>>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
  *  When the value is 0 at the end of a round, this means all drones are
  *	 honest, so a disturbance must occour. distCnt contains 
  */
 
+<<<<<<< HEAD
+double compPC = 0;
+=======
 double pcComp = 0;
+>>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
 //cycles length is defined as long it took all drones to converge to being honest. 
 std::vector<int> cycles; //each item is a cycle length
 int distAt = 0, distCnt = 0; //purpose not fully understood a.t.m, will review to see if still needed
@@ -71,6 +83,12 @@ double PA = 0.5; //master probability fo verifying
 double alphaM = .1; //master learning rate;0 = never adjust PA, anything greater shows proportion of override
 
 void compLearningRate();
+<<<<<<< HEAD
+double dy_updatePC(int, double, int, int);
+double dy_updatePA(int, double, int);
+double dy_computeUtil(int, int, int);
+=======
 void dy_updatePC(DroneUnit*, Master*);
 void dy_updatePA(Master*);
 void dy_computeUtil(DroneUnit*, Master*);
+>>>>>>> 73c91422821cd516f483a1d0eed568276e92b3b9
