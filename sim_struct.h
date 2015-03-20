@@ -35,17 +35,17 @@ std::vector< DroneUnit > setCoins(std::vector< DroneUnit >, int, Master*);
 
 double WPC = 1;		//drone punishment for being caught cheating
 double WCT = 0.1;	//drone cost for computing the task
-double WBY = 1;		//drone reward
+double WBA = 1;		//drone reward
 double MPW = 0; 	//master punishment for accepting a wrong answer
-double *MCY = &WBY;	//master cost for accepting answer
-double MCA = 20; 	//master cost for verifying 
+double *MCA = &WBA;	//master cost for accepting answer
+double MCV = 20; 	//master cost for verifying 
 double MBR = 0;		//master benefit for accepting a right answer
 
 ////////////////////////////////////////////////////////////////////////////
 /* !#MIX#! */
 
 char GAME_NAME[] = "gameN-0n_model-MAJORITY"; //name for mixed equilibrai type
-const int MODEL = 1;
+const int MODEL = 1; //Rm
 const char type_1[] = "_disobedient";
 const char type_2[] = "_compliant";
 const char* type = type_2; //mixed equilibrai to run for simulations 

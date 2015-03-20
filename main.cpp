@@ -42,19 +42,20 @@ int main() {
 	vector<DroneUnit> GRPS = genSingletons(n, 1.0); //generate groups (drones)
 	int len = GRPS.size();
 
-	mstr.prob = (n * WBY + WCT) / (n * (WPC + 2 * WBY)) + WCT / 10;
+//pure equilibria simulations 
+/*	mstr.prob = (n * WBA + WCT) / (n * (WPC + 2 * WBA)) + WCT / 10;
 	GRPS = setCoins(GRPS, len, &mstr); //group decide to follow/deviate
 	mstr.flipCoin();
 	mx_masterUtil(&mstr);
-
 	for (int i = 0; i < len; i++) {
 		mx_compteUtil(&GRPS[i], &mstr);
 		printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i].pc, GRPS[i].choice, GRPS[i].util);
 
 	}
 	printf("master) prob %f| choice %d| util %f\n", mstr.prob, mstr.choice, mstr.util);
+*/
 
-
+//evolutionary dynamics simulations
 /*	compLearningRate(); //set a learning rate for groups
 	
 	for (int r = 1; r < R_MX; r++) {
@@ -101,18 +102,18 @@ void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 			utilF = 0;
 		} else {
 			utilD = - WPC;
-			utilF = WBY - WCT / drn->size;
+			utilF = WBA - WCT / drn->size;
 		}
 	} else {
 		if ( mstr->divergent > (n/2) ) {
 			switch(MODEL) {
 				case 1: //Rm
-					utilD = WBY;
+					utilD = WBA;
 					utilF = - WCT / drn->size;
 					break;
 				case 2: //Ra
-					utilD = WBY;
-					utilF = WBY - WCT / drn->size;
+					utilD = WBA;
+					utilF = WBA - WCT / drn->size;
 					break;
 				default:
 					utilD = 0;
@@ -122,11 +123,11 @@ void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 			switch(MODEL) {
 				case 1: //Rm
 					utilD = 0;
-					utilF = WBY - WCT / drn->size;
+					utilF = WBA - WCT / drn->size;
 					break;
 				case 2: //Ra
-					utilD = WBY;
-					utilF = WBY - WCT / drn->size;
+					utilD = WBA;
+					utilF = WBA - WCT / drn->size;
 					break;
 				default: //Rn
 					utilD = 0;
@@ -144,19 +145,19 @@ void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 void mx_masterUtil(Master* mstr) {
 	if (mstr->choice) { //master checks
 		if (mstr->divergent == n) { //everyone diviated
-			mstr->util = - MPW - MCA + n * WPC;
+			mstr->util = - MPW - MCV + n * WPC;
 		} else { //everyone followed
 			mstr->correct++;
-			mstr->util = MBR - MCA - (n - mstr->divergent) * (*MCY) + mstr->divergent * WPC;
+			mstr->util = MBR - MCV - (n - mstr->divergent) * (*MCA) + mstr->divergent * WPC;
 		}
 	} else { //master does not check
 		if ( mstr->divergent > (n / 2) ) { //majority deviated
 			switch(MODEL) {
 				case 1: //Rm
-					mstr->util = - MPW - mstr->divergent * (*MCY);
+					mstr->util = - MPW - mstr->divergent * (*MCA);
 					break;
 				case 2: //Ra
-					mstr->util = - MPW - n * (*MCY);
+					mstr->util = - MPW - n * (*MCA);
 					break;
 				default: //Rn
 					mstr->util = - MPW;
@@ -165,10 +166,10 @@ void mx_masterUtil(Master* mstr) {
 			mstr->correct++;
 			switch(MODEL) {
 				case 1: //Rm
-					mstr->util = MBR - (n - mstr->divergent) * (*MCY);
+					mstr->util = MBR - (n - mstr->divergent) * (*MCA);
 					break;
 				case 2: //Ra
-					mstr->util = MBR - n * (*MCY);
+					mstr->util = MBR - n * (*MCA);
 					break;
 				default: //Rn
 					mstr->util = MBR;
@@ -185,7 +186,7 @@ void dy_updatePC(DroneUnit* drn, Master* mstr) {
 	double tmp;
 	if (mstr->choice) {
 		if (drn->choice == 1) { //unit follows
-			tmp = (drn->pc + alphaW * (aspiration - (WBY - WCT))) * drn->choice;
+			tmp = (drn->pc + alphaW * (aspiration - (WBA - WCT))) * drn->choice;
 		} else { //unit deviated 
 			tmp = (drn->pc - alphaW * (aspiration - WPC)) * drn->choice;			
 		}
@@ -194,11 +195,11 @@ void dy_updatePC(DroneUnit* drn, Master* mstr) {
 			if (drn->choice == 1) { //unit follows but not part of the majority
 				tmp = (drn->pc + alphaW * (aspiration + WCT)) * drn->choice;
 			} else { //unit diviates and part of the majority
-				tmp = (drn->pc + alphaW * (WBY - aspiration)) * drn->choice;
+				tmp = (drn->pc + alphaW * (WBA - aspiration)) * drn->choice;
 			}
 		} else {
 			if (drn->choice == 1) { //unit follows and is part of the majority
-				tmp = (drn->pc + alphaW * (aspiration - (WBY - WCT))) * drn->choice;				
+				tmp = (drn->pc + alphaW * (aspiration - (WBA - WCT))) * drn->choice;				
 			} else { //unit deviates but is not part of the majority 
 				tmp = (drn->pc - alphaW * aspiration) * drn->choice;
 			}
@@ -221,7 +222,7 @@ void dy_computeUtil(DroneUnit* drn, Master* mstr) {
 	double tmp;
 	if (mstr->choice) { //master checks
 		if (drn->choice == 1) { //unit follows, provide follwers reward
-			tmp = WBY - WCT; 
+			tmp = WBA - WCT; 
 		} else { //unit deviates, apply punishment 
 			tmp = -WPC;
 		}
@@ -230,11 +231,11 @@ void dy_computeUtil(DroneUnit* drn, Master* mstr) {
 			if (drn->choice == 1) { //unit follows
 				tmp = -WCT;
 			} else { //unit deviated
-				tmp = WBY;
+				tmp = WBA;
 			}
 		} else { //majority followed
 			if (drn->choice == 1) { //unit followed
-				tmp = WBY - WCT;
+				tmp = WBA - WCT;
 			} else { //unit deviated 
 				tmp = 0;
 			}
