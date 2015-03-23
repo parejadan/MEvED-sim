@@ -31,7 +31,7 @@ public:
 	double util;
 };
 
-std::vector< DroneUnit > setCoins(std::vector< DroneUnit >, int, Master*);
+void setCoins(std::vector< DroneUnit* >, int, Master*);
 
 double WPC = 1;		//drone punishment for being caught cheating
 double WCT = 0.1;	//drone cost for computing the task

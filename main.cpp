@@ -15,20 +15,19 @@ void Master::flipCoin() {
 	}
 }
 
-vector< DroneUnit > setCoins(vector< DroneUnit > GRPS, int drnCount, Master* mstr) {
+void setCoins(vector< DroneUnit* > GRPS, int drnCount, Master* mstr) {
 	int followers = 0;
 	int divergent = 0;
 	for (int i = 0; i < drnCount; i++) {
-		GRPS[i].flipCoin();
+		GRPS[i]->flipCoin();
 
-		if (GRPS[i].choice == 1) { followers += GRPS[i].size; }
-		else { divergent += GRPS[i].size; }
+		if (GRPS[i]->choice == 1) { followers += GRPS[i]->size; }
+		else { divergent += GRPS[i]->size; }
 	}
 
 	mstr->followers = followers;
 	mstr->divergent = divergent;
 	//printf("\n>followers: %d| divergent: %d\n", followers, divergent);
-	return GRPS;
 }
 
 int main() {
@@ -39,21 +38,22 @@ int main() {
 	//stringstream ss;
 
 	Master mstr(0.5, 0); //init master with a prob of 0.5, and util 0
-	vector<DroneUnit> GRPS = genSingletons(n, 1.0); //generate groups (drones)
+	vector<DroneUnit*> GRPS = genSingletons(n, 0.5); //generate groups (drones)
 	int len = GRPS.size();
+	mstr.prob = 2 * WCT / (WBA + WCT); //Lemma 1 from paper simplified pv bound for (eq. < pv < 1)
 
 //pure equilibria simulations 
-/*	mstr.prob = (n * WBA + WCT) / (n * (WPC + 2 * WBA)) + WCT / 10;
-	GRPS = setCoins(GRPS, len, &mstr); //group decide to follow/deviate
+	mstr.prob = (n * WBA + WCT) / (n * (WPC + 2 * WBA)) + WCT / 10;
+	setCoins(GRPS, len, &mstr); //group decide to follow/deviate
 	mstr.flipCoin();
 	mx_masterUtil(&mstr);
 	for (int i = 0; i < len; i++) {
-		mx_compteUtil(&GRPS[i], &mstr);
-		printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i].pc, GRPS[i].choice, GRPS[i].util);
+		mx_compteUtil(GRPS[i], &mstr);
+		printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i]->pc, GRPS[i]->choice, GRPS[i]->util);
 
 	}
 	printf("master) prob %f| choice %d| util %f\n", mstr.prob, mstr.choice, mstr.util);
-*/
+
 
 //evolutionary dynamics simulations
 /*	compLearningRate(); //set a learning rate for groups
@@ -94,6 +94,16 @@ int main() {
 
 ////////////////////////////////////////////////////////////////////////////
 /* !#MIX#! */
+
+/**
+ * chernoff-hoeffding upper bound the tails of the probability distribution
+ *	on the number of cheaters using the following bounds
+ * - drivergent -> number of DroneUnits (workers) that deviated from the model
+ */
+int checkTails(int divergent) {
+
+}
+
 void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 	double utilD, utilF;
 	if (mstr->choice) {
