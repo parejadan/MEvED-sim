@@ -3,18 +3,19 @@
 
 double randFunction() { return (double)rand() / RAND_MAX; }
 
-DroneUnit::DroneUnit(double p) {
-	pc = p; util = 0;
-	choice = 0; size = 0;
-}
 DroneUnit::DroneUnit(double p, int sz) {
 	pc = p; util = 0;
 	choice = 0; size = sz;
-}
+ }
 
 void DroneUnit::flipCoin() {
 	if (randFunction() < pc) { choice = -1; } //unit deviated
 	else { choice = 1; } //unit is followed
+}
+
+void DroneUnit::flipCoin(double p) { //overload drone unit's pc with a specific pc
+ 	if (randFunction() < p) { choice = -1; } //unit deviated
+	else { choice = 1; } //unit is followed	
 }
 
 std::vector<DroneUnit*> genSingletons(int limit, double initPC) {

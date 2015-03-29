@@ -5,21 +5,24 @@
 
 using namespace std;
 
-Master::Master(double p, double u) { prob = p; util = u; correct = 0; }
+Master::Master(double p) { prob = p; util = 0; correct = 0; }
 
 void Master::flipCoin() {
-	if (randFunction() < PA) { //master checks
+	if (randFunction() < prob) { //master checks
 		choice = 1;
 	} else { //master doesn't check
 		choice = 0;
 	}
 }
 
-void setCoins(vector< DroneUnit* > GRPS, int drnCount, Master* mstr) {
+void setCoins(vector< DroneUnit* > GRPS, Master* mstr, int len, double prob) {
 	int followers = 0;
 	int divergent = 0;
-	for (int i = 0; i < drnCount; i++) {
-		GRPS[i]->flipCoin();
+	for (int i = 0; i < len; i++) {
+		if (prob != -1.0) //flip coin on a specific probability
+			GRPS[i]->flipCoin(prob);
+		else //flip coin on drone's own unique probability
+			GRPS[i]->flipCoin();
 
 		if (GRPS[i]->choice == 1) { followers += GRPS[i]->size; }
 		else { divergent += GRPS[i]->size; }
@@ -33,78 +36,51 @@ void setCoins(vector< DroneUnit* > GRPS, int drnCount, Master* mstr) {
 int main() {
 	srand( time(NULL) );
 
-	string pcDat = "", distDat = "";
-	ofstream simData, simData2;
-	//stringstream ss;
-
-	Master mstr(0.5, 0); //init master with a prob of 0.5, and util 0
-	vector<DroneUnit*> GRPS = genSingletons(n, 0.5); //generate groups (drones)
+	Master mstr(pv); //create masster with pv=0.5
+	vector<DroneUnit*> GRPS = genSingletons(n, pc); //generate groups (drones) with pc=1
 	int len = GRPS.size();
-	mstr.prob = 2 * WCT / (WBA + WCT); //Lemma 1 from paper simplified pv bound for (eq. < pv < 1)
+	//compLearningRate(); //set a learning rate for groups
 
-//pure equilibria simulations 
-	mstr.prob = (n * WBA + WCT) / (n * (WPC + 2 * WBA)) + WCT / 10;
-	setCoins(GRPS, len, &mstr); //group decide to follow/deviate
-	mstr.flipCoin();
-	mx_masterUtil(&mstr);
-	for (int i = 0; i < len; i++) {
-		mx_compteUtil(GRPS[i], &mstr);
-		printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i]->pc, GRPS[i]->choice, GRPS[i]->util);
+	for (int rnd = 1; rnd <= END; rnd++) {
+		setCoins(GRPS, &mstr, len, pc); //flip worker coins; master recieves results
+		counts.push_back(mstr.divergent); //record number of incorret results for round
 
+		for (int i = 1; i <= rnd; i++) {
+			for (int r = 1; r <= rnd - i + 1; r++) {
+				minDelta = counts[i - 1];
+
+				for (int j = 1; j <= r - 1; j++) if (counts[i + j - 1] < minDelta) { minDelta = counts[i + j - 1]; }
+
+				if (r * pow(minDelta, 2.0) > log(n) / (n * pc)) { pc = 1 ; }
+			}
+		}
 	}
-	printf("master) prob %f| choice %d| util %f\n", mstr.prob, mstr.choice, mstr.util);
-
-
-//evolutionary dynamics simulations
-/*	compLearningRate(); //set a learning rate for groups
-	
-	for (int r = 1; r < R_MX; r++) {
-		GRPS = setCoins(GRPS, len, &mstr); //group decide to follow/deviate
-		mstr.flipCoin(); //master decides to check/not-check
-
-		for (int i = 0; i < len; i++) {
-			dy_computeUtil(&GRPS[i], &mstr);
-			
-			dy_updatePC(&GRPS[i], &mstr); //update group's PC
-			printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i].pc, GRPS[i].choice, GRPS[i].util);
-			// += ss.str(GRPS[i].pc) + ( (i == len-1) ? "\n":",");
-			compPC += GRPS[i].pc;
-		}
-
-		dy_updatePA(&mstr);
-		printf("master) prob %f| choice %d| util %f\n", mstr.prob, mstr.choice, mstr.util);
-		//create disturbance when all PCs converge to 0
-		if (compPC == 0) {
-			distCnt++;
-			cycles.push_back(r - distAt); //record length of the cylce
-			distAt = r;
-		printf("\nReset #%d on round # %d| cycle: %d|\n", distCnt, r, cycles[distCnt-1]);
-		}
-
-		printf("compPC) %f\n", compPC);
-
-		for (int i = 0; i < len; i++) {
-			GRPS[i].pc = randFunction(); //reset PC randomly
-			printf("PC %f|%s", GRPS[i].pc, ( (i == len-1) ? "\n":"") );
-		}
-
-		//distDat += ss.str(r) + "," + ss.str(cycles[distCnt-1]) + "\n";
-	}*/
 }
 
 ////////////////////////////////////////////////////////////////////////////
 /* !#MIX#! */
 
-/**
- * chernoff-hoeffding upper bound the tails of the probability distribution
- *	on the number of cheaters using the following bounds
- * - drivergent -> number of DroneUnits (workers) that deviated from the model
- */
-int checkTails(int divergent) {
+void mx_compteUtil(DroneUnit* drn, Master* mstr) {
+	double util;
+	if ( drn->choice == -1 ) { //deviated
+		if ( mstr->divergent > tou ) { //utility (1)
+			util = (1 - mstr->prob) * WBA - mstr->prob * WPC * mstr->divergent;
+		} else { //utility (3)
+			util = - mstr->prob * WPC * mstr->divergent;
+		}
+	} else {
+		if ( mstr->divergent > tou ) { //utility (2)
+			util = mstr->prob * WBA - WCT;
+		} else { //utility (4)
+			util = WBA - WCT;
+		}
+	}
 
+	drn->util = util;
 }
 
-void mx_compteUtil(DroneUnit* drn, Master* mstr) {
+//util for single round computations 
+/*void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 	double utilD, utilF;
 	if (mstr->choice) {
 		if (mstr->divergent == n) {
@@ -115,7 +91,7 @@ void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 			utilF = WBA - WCT / drn->size;
 		}
 	} else {
-		if ( mstr->divergent > (n/2) ) {
+		if ( mstr->divergent > tou ) {
 			switch(MODEL) {
 				case 1: //Rm
 					utilD = WBA;
@@ -151,7 +127,6 @@ void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 	else
 		drn->util = utilD;
 }
-
 void mx_masterUtil(Master* mstr) {
 	if (mstr->choice) { //master checks
 		if (mstr->divergent == n) { //everyone diviated
@@ -161,7 +136,7 @@ void mx_masterUtil(Master* mstr) {
 			mstr->util = MBR - MCV - (n - mstr->divergent) * (*MCA) + mstr->divergent * WPC;
 		}
 	} else { //master does not check
-		if ( mstr->divergent > (n / 2) ) { //majority deviated
+		if ( mstr->divergent > tou ) { //majority deviated
 			switch(MODEL) {
 				case 1: //Rm
 					mstr->util = - MPW - mstr->divergent * (*MCA);
@@ -186,10 +161,35 @@ void mx_masterUtil(Master* mstr) {
 			}
 		}
 	}
-}
+}*.
 
 /////////////////////////////////////////////////////////////////////////////
 /* !#EVO#! */
+void doEvo(vector<DroneUnit*> GRPS, Master* mstr, int r, int len) {
+	setCoins(GRPS, mstr, len, -1.0); //group decide to follow/deviate
+	mstr->flipCoin(); //master decides to check/not-check
+	for (int i = 0; i < len; i++) {
+		dy_computeUtil(GRPS[i], mstr);
+		dy_updatePC(GRPS[i], mstr); //update group's PC
+		printf("%d) PC %f| choice %d| util %f\n", i, GRPS[i]->pc, GRPS[i]->choice, GRPS[i]->util);
+		compPC += GRPS[i]->pc;
+	}
+	dy_updatePA(mstr);
+	printf("master) prob %f| choice %d| util %f\n", mstr->prob, mstr->choice, mstr->util);
+	//create disturbance when all PCs converge to 0
+	if (compPC == 0) {
+		distCnt++;
+		cycles.push_back(r - distAt); //record length of the cylce
+		distAt = r;
+	printf("\nReset #%d on round # %d| cycle: %d|\n", distCnt, r, cycles[distCnt-1]);
+	}
+	printf("compPC) %f\n", compPC);
+	for (int i = 0; i < len; i++) {
+		GRPS[i]->pc = randFunction(); //reset PC randomly
+		printf("PC %f|%s", GRPS[i]->pc, ( (i == len-1) ? "\n":"") );
+	}
+}
+
 void compLearningRate() { alphaW = randFunction() * (1 / (aspiration + WPC) ); }
 
 void dy_updatePC(DroneUnit* drn, Master* mstr) {
@@ -256,4 +256,3 @@ void dy_computeUtil(DroneUnit* drn, Master* mstr) {
 	mstr->util += tmp;
 	drn->util += tmp;
 }
-
