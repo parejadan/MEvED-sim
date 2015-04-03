@@ -14,7 +14,5 @@ public:
 
 };
 
-// Generates a given number of drone units (size=1 for all)
-std::vector<DroneUnit*> genSingletons(int, double);
-// Generate droneunits until the composite size for all created equals the number specified
-std::vector<DroneUnit*> genRandColluders(int, double);
+std::vector<DroneUnit*> genSingletons(int, double); //Generates a given # of units (all size=1)
+std::vector<DroneUnit*> genRandColluders(int, double); // Generate units until thier composite size equals the number specified

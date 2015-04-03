@@ -6,7 +6,7 @@ double randFunction() { return (double)rand() / RAND_MAX; }
 DroneUnit::DroneUnit(double p, int sz) {
 	pc = p; util = 0;
 	choice = 0; size = sz;
- }
+}
 
 void DroneUnit::flipCoin() {
 	if (randFunction() < pc) { choice = -1; } //unit deviated
