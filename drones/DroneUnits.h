@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <vector> // declared here for optimization reasons not completely cleare A.T.M
 
+extern double dR, dP, dC;
 double randFunction(); //returns random value between range (0,1)
 class DroneUnit {
 public:
@@ -14,5 +15,5 @@ public:
 
 };
 
-std::vector<DroneUnit*> genSingletons(int, double); //Generates a given # of units (all size=1)
-std::vector<DroneUnit*> genRandColluders(int, double); // Generate units until thier composite size equals the number specified
+std::vector<DroneUnit*> genSingletons(int, double); //generates a given # of units (all size=1)
+std::vector<DroneUnit*> genRandColluders(int, double); //generate units until thier composite size equals the number specified

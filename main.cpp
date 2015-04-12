@@ -1,5 +1,6 @@
 #include "sim_struct.h"
 #include <fstream>
+#include <sstream>
 #include <ctime> //produce random seeds for srand & rand
 
 using namespace std;
@@ -14,11 +15,15 @@ void Master::flipCoin() {
 void setCoins(vector< DroneUnit* > GRPS, Master* mstr, int len, double prob) {
 	mstr->correct = 0; mstr->incorrect = 0;
 	for (int i = 0; i < len; i++) {
-		if (prob != -1.0) //flip coin on a specific probability
+		if (prob != -1.0)  {//flip coin on a specific probability
 			GRPS[i]->flipCoin(prob);
-		else //flip coin on drone's own unique probability
+			//printf("\nflipping bad\n");
+		} else {//flip coin on drone's own unique probability
 			GRPS[i]->flipCoin();
+			//printf("r:%f\t|pc:%f\t|choice: %f\n", dR, dP, dC);
+			//printf("\nflipping good\n");
 
+		}
 		if (GRPS[i]->choice == 1) { mstr->correct += GRPS[i]->size; }
 		else { mstr->incorrect += GRPS[i]->size; }
 	}
@@ -26,68 +31,98 @@ void setCoins(vector< DroneUnit* > GRPS, Master* mstr, int len, double prob) {
 
 int main() {
 	srand( time(NULL) );
+	ostringstream mx_data, dy_data, tmp, readme;
+	ofstream mx_file, dy_file, readme_dat;
+	readme << "columns for both data files are: deviating pc, wba, round of convergence/detection\n";
+	readme << "number of workers: " << n << "\ndeviator count: " << devCount <<"\n";
+	readme << "if the 3rd column in either file is -1, that means the algorithm/mechanism failed to converge/detect";
+	readme_dat.open("readme.txt"); readme_dat << readme.str(); readme_dat.close();
 
-	//evolutionary setup for simulation
+	len = n; //If not using singletons, this needs to change
+	pv = 1.0 / sqrt(n);
+	pc = 0.24;
+	maxR = floor(2*n*pc*log(1/eps));
 	Master dy_mstr(0.5);
-	vector<DroneUnit*> dy_GRPS = genSingletons(n, 0.5);
-	bool converged; //true when all units from evolutionary dynamics converge to pc=0
-	
-	//mixed equilibria setup for simulation
 	Master mx_mstr(pv);
-	vector<DroneUnit*> mx_GRPS = genSingletons(n, 0.5);
-	bool detected; //true when units from mixed equilibria detect
 
-	len = mx_GRPS.size(); //If not generating singletons, this needs to change
-	int rsetLim = ceil(len/2.0); //number of units to reset pc=1
-	for (int rnd = 1; rnd <= END; rnd++) {
-		//simulating evolutaionry dynamics 
-		setCoins(dy_GRPS, &dy_mstr, len, -1.0); //reinforcement model coinflip, all units have a unique pc
-		converged = doEvo(dy_GRPS, &dy_mstr, rnd, rsetLim);
+	bool converged; //true when all units from evolutionary dynamics converge to pc=0
+	bool detected; //true when units from mixed equilibria detected
+	int conv = 0, dect = 0;
+	for (double devPC = 0.5; devPC <= 1.0; devPC += 0.1) {
+		vector<DroneUnit*> dy_GRPS = genSingletons(n, 0.0);
+		vector<DroneUnit*> mx_GRPS = genSingletons(n, pc);
 
-		//simulating mixed equilibria repeated games
-		setCoins(mx_GRPS, &mx_mstr, len, -1.0); //mixed equilibria coin flip, all units have a standard pc
-		counts.push_back(mx_mstr.incorrect); //record number of incorret results for round
+		for(int i = 0; i < devCount; i++) { //create deviators within workers
+			dy_GRPS[i]->pc = devPC;
+			mx_GRPS[i]->pc = devPC;
+		}
+		WBA = 0.1;
+		for (double i = 0.1; WBA <= 2.0; WBA += i) {
+			//reset parameters for simulations
+			WPC = WBA/n;
+			vector<int>().swap(counts);
+			conv = 0, dect = 0;
 
-		for (int i = 1; i <= rnd; i++) {
-			for (int r = 1; r <= rnd - i + 1; r++) {
-				delta = sqrt( log(n) / (r*n*pc) );
-				minC = counts[i - 1];
-				maxC = counts[i - 1];
+			for (int rnd = 1; rnd <= END; rnd++) { //start repeated games
+				if (conv == 0) { //simulating evolutaionry dynamics until convergence
 
-				//printf("\nrnd: %d\t|rnd-i+1: %d\t|minDelta: %d\n",rnd, delta, rnd - i + 1);
-				for (int j = 1; j <= r - 1; j++) {
-					if ( counts[i + j - 1] < minC ) minC = counts[i + j - 1];
-					if ( counts[i + j - 1] > maxC ) maxC = counts[i + j - 1]; 
+					setCoins(dy_GRPS, &dy_mstr, len, -1.0);
+					converged = doEvo(dy_GRPS, &dy_mstr, rnd);
+					
+					if (converged) {
+						conv = rnd;
+						//printf("devPC: %f\t| WBA: %f\t|conv: %d\n", devPC, WBA, conv);
+						dy_data << devPC << "," << WBA << "," << rnd << "\n";
+					} else if (rnd == END) { dy_data << devPC << "," << WBA << "," << -100 << "\n"; }
+				}
+				
+				if (dect == 0) { //simulating mixed equilibria until detection
+					
+					setCoins(mx_GRPS, &mx_mstr, len, -1.0);
+					detected = doMixed(rnd, &mx_mstr);
+					if (detected) {
+						dect = rnd;
+						//printf("dev's PC: %f\t|# of deviators: %d\t| WBA: %f\t|detection at round: %d\n\n", devPC, (int)ceil(n/2.0), WBA, rnd);
+						mx_data << devPC << "," << WBA << "," << rnd << "\n";
+					} else if (rnd == END) { mx_data << devPC << "," << WBA << "," << -100 << "\n"; }
 				}
 
-				if (minC >= (1 + delta) * n * pc || maxC <= (1 - delta) * n * pc)
-					detected = true;
+				if (converged && detected) rnd = END+1;
 			}
 		}
-
-		//checking convergence and dectection from mixed and dynamic algorithms
-		if (converged) {
-			//printf("\n>round length: %d\n", rnd);
-			converged = false;
-			//exit (EXIT_FAILURE);
-			printf("\n> evo units converged at: %d\t|len: %d\n", rnd, rnd - c_prev);
-			c_prev = rnd;
-		}
-		if (detected) {
-			///printf("\n>round length: %d\n", rnd);
-			detected = false;
-			//exit (EXIT_FAILURE);
-			printf("\n> mixed units detected at: %d\t|len: %d\n", rnd, rnd - d_prev);
-			d_prev = rnd;
-		}
-
-		if (converged && detected)  exit (EXIT_FAILURE);
-
+		vector<DroneUnit*>().swap(dy_GRPS);
+		vector<DroneUnit*>().swap(mx_GRPS);
 	}
+
+	mx_file.open("mixed-data.txt");
+	mx_file << mx_data.str();
+	mx_file.close();
+	dy_file.open("dynamic-data.txt");
+	dy_file << dy_data.str();
+	dy_file.close();
 }
 
 ////////////////////////////////////////////////////////////////////////////
 /* !#MIX#! */
+bool doMixed(int rnd, Master* mx_mstr) {
+	counts.push_back(mx_mstr->incorrect); //record number of incorret results for round
+	if (counts.size() > maxR) counts.erase(counts.begin() + 1); //remove first element from vector
+
+	minC = n;
+	maxC = 0;
+	int R = min(maxR, rnd);
+	for (int r = 1; r <= R; r++) {
+		if ( counts[R-r] < minC ) minC = counts[R-r];
+		if ( counts[R-r] > maxC ) maxC = counts[R-r];
+
+		delta = sqrt( 3 * log(1.0/eps) / (r*n*pc) );
+
+		if ( minC >= ceil( (1+delta)*n*pc ) || maxC <= floor( (1-delta)*n*pc ) )
+			return true;
+	}
+	return false;
+}
+
 void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 	double util;
 	if ( drn->choice == -1 ) { //cheated
@@ -108,30 +143,30 @@ void mx_compteUtil(DroneUnit* drn, Master* mstr) {
 
 /////////////////////////////////////////////////////////////////////////////
 /* !#EVO#! */
-bool doEvo(vector<DroneUnit*> GRPS, Master* mstr, int rnd, int resetLim) {
+bool doEvo(vector<DroneUnit*> GRPS, Master* mstr, int rnd) {
 	double compPC = 0;
+	//printf("round: %d\t|", rnd);
 	for (int i = 0; i < len; i++) {
-		dy_computeUtil(GRPS[i], mstr);
-		dy_updatePC(GRPS[i], mstr); //update unit's PC
-		//printf("> pc-%d: %f|", i, GRPS[i]->pc );
+		dy_computeUtil(GRPS[i], mstr, WBA*pc);
+		//printf("pc-%d: %f|\t", i, GRPS[i]->pc );
+		dy_updatePC(GRPS[i], mstr, WBA*pc); //update unit's PC
 		compPC += GRPS[i]->pc;
 	}
-//	printf("rnd: ","\n");
+	//printf("\n");
 	dy_updatePA(mstr);
 	if (compPC == 0) { //check if units converged
-		for (int i = 0; i < ceil(resetLim); i++) { GRPS[i]->pc = 1; }//randFunction();
 		return true;
 	}
 	return false;
 }
 
-void dy_updatePC(DroneUnit* drn, Master* mstr) {
+void dy_updatePC(DroneUnit* drn, Master* mstr, double wpc) {
 	double tmp;
 	if (mstr->choice) {
 		if (drn->choice == 1) { //unit was honest
 			tmp = drn->pc + alphaW * (aspiration - (WBA - WCT));
 		} else { //unit cheated
-			tmp = drn->pc - alphaW * (aspiration - WPC);			
+			tmp = drn->pc - alphaW * (aspiration - wpc);			
 		}
 	} else { //master does not check
 		if (mstr->incorrect > tou) {
@@ -159,13 +194,13 @@ void dy_updatePA(Master* mstr) {
 	}
 }
 
-void dy_computeUtil(DroneUnit* drn, Master* mstr) {
+void dy_computeUtil(DroneUnit* drn, Master* mstr, double wpc) {
 	double tmp;
 	if (mstr->choice) { //master checks
 		if (drn->choice == 1) { //apply honest reward
 			tmp = WBA - WCT; 
 		} else { //apply cheater's reward
-			tmp = -WPC;
+			tmp = -wpc;
 		}
 	} else { //master does not check
 		if (mstr->incorrect > tou) { //majority cheated 
