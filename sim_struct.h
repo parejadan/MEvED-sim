@@ -10,8 +10,8 @@
 #include <vector>
 #include <math.h>
 
-int len, maxR, END = 200;
-int n = 9, devCount = (int)ceil(n/2.0), tou = (int) (n / 2.0);
+int len, maxR, END = 100;
+int n = 9, devCount = (int)ceil(n/2);
 
 class Master {
 public:
@@ -26,31 +26,34 @@ public:
 
 void setCoins(std::vector< DroneUnit* >, Master*, int, double);
 
-double WBA = 0.01;	//drone reward
-double WPC = WBA/n;	//drone punishment for being caught cheating
+double WBA = 1.0;	//drone reward
+double WPC = WBA;	//drone punishment for being caught cheating
 double WCT = 0.1;	//drone cost for computing the task
-double MPW = 0.0; 	//master punishment for accepting a wrong answer
 double *MCA = &WBA;	//master cost for accepting answer
-double MCV = 20; 	//master cost for verifying 
-double MBR = 0;		//master benefit for accepting a right answer
+double MPW = n*WBA; //master punishment for accepting a wrong answer
+double MCV = n*WBA; //master cost for verifying 
+double MBR = n*WBA;	//master benefit for accepting a right answer
 
 ////////////////////////////////////////////////////////////////////////////
-/* !#MIX#! */ 
+/* !#MIX#! */
 int minC, maxC;
 std::vector<int> counts;
 double delta, pc, pv, eps = 0.01;
-bool doMixed(int, Master*);
+bool doMixed(int, double, double, Master*, std::vector<DroneUnit*>);
 double mx_masterProb();
-void mx_masterUtil(Master*);
-void mx_compteUtil(DroneUnit*, Master*);
+void mx_mstrUtil(Master*, double);
+void os_mstrUtil(Master*, double);
+void mx_wrkUtil(DroneUnit*, Master*, double, double);
 
 /////////////////////////////////////////////////////////////////////////////
 /* !#EVO#! */
-double aspiration = 0.01; //assumed that all drones have the same learning rate
-double alphaW = 0.01; //use computeLearningRate() - assume all drones have the same learning rate
-double alphaM = 0.01; //master learning rate;0 = never adjust PA, anything greater shows proportion of override
+double aspiration = 0.1; //worker i's "a" value
+double alphaW = 0.01; //learning rate for worker
+double alphaM = 0.01; //learning rate for master
+double tou = 0.5;
 
-bool doEvo(std::vector<DroneUnit*>, Master*, int);
-void dy_updatePC(DroneUnit*, Master*, double);
+bool doEvo(std::vector<DroneUnit*>, Master*, int, double, double);
+void dy_updatePC(DroneUnit*, Master*, double, double);
 void dy_updatePA(Master*);
-void dy_computeUtil(DroneUnit*, Master*, double);
+void dy_wrkUtil(DroneUnit*, Master*, double, double);
+void dy_mstrUtil(Master*, double, double);
